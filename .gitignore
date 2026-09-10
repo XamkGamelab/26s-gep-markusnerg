@@ -1,0 +1,36 @@
+# --- Tehtävänannon vaatimat ---
+/[Oo]ut/
+/[Bb]uild/
+.vs/
+
+# --- CMake ---
+CMakeCache.txt
+CMakeFiles/
+CMakeUserPresets.json
+cmake_install.cmake
+install_manifest.txt
+_deps/
+
+# --- Visual Studio / MSVC ---
+*.user
+*.suo
+*.sln.docstates
+*.vcxproj.user
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# --- Käännöstuotokset ---
+*.obj
+*.o
+*.exe
+*.pdb
+*.ilk
+*.dll
+*.lib
+*.a
+
+# --- Käyttöjärjestelmä ---
+.DS_Store
+Thumbs.db
