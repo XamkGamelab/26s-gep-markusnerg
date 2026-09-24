@@ -2,33 +2,33 @@
 
 #include <SDL3/SDL.h>
 
-// Sovelluksen elinkaari: init() -> run() -> shutdown().
 class Game
 {
 public:
-    // Alustaa SDL:n ja luo ikkunan. Palauttaa false, jos jokin epäonnistui.
     bool init();
-
-    // Pääsilmukka. Palaa vasta kun poistumisehto täyttyy.
     void run();
-
-    // Vapauttaa resurssit. Turvallinen kutsua vaikka init() olisi epäonnistunut.
     void shutdown();
 
 private:
-    void handleEvent(const SDL_Event& event);
-    void onKeyDown(SDL_Keycode key);
-    void onWindowResized();
+    void processEvents();
+    void update(float deltaTime);
     void render();
+    void clampImageToWindow();
 
-    SDL_Window* m_window = nullptr;
+    SDL_Window*   m_window   = nullptr;
+    SDL_Renderer* m_renderer = nullptr;
+    SDL_Texture*  m_texture  = nullptr;
+
     bool m_isRunning = false;
 
-    // Nykyinen taustaväri. Alkutila on tumma harmaa.
-    Uint8 m_red   = 30;
-    Uint8 m_green = 30;
-    Uint8 m_blue  = 30;
+    float m_imageX = 0.0f;
+    float m_imageY = 0.0f;
+    float m_imageW = 0.0f;
+    float m_imageH = 0.0f;
 
-    static constexpr int kDefaultWidth  = 1280;
-    static constexpr int kDefaultHeight = 720;
+    Uint64 m_lastTicks = 0;
+
+    static constexpr int   kDefaultWidth  = 1280;
+    static constexpr int   kDefaultHeight = 720;
+    static constexpr float kMoveSpeed     = 400.0f;
 };
