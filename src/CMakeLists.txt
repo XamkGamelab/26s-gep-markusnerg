@@ -4,6 +4,8 @@ add_executable(GEP26S
     game.hpp
     inputmanager.cpp
     inputmanager.hpp
+    time.cpp
+    time.hpp
 )
 
 target_include_directories(GEP26S PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
@@ -11,6 +13,7 @@ target_include_directories(GEP26S PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(GEP26S PRIVATE
     SDL3::SDL3
     SDL3_image::SDL3_image
+    glad
 )
 
 add_custom_target(AssetCopy

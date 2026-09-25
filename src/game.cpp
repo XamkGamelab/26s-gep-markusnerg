@@ -1,5 +1,8 @@
 #include "game.hpp"
 #include "inputmanager.hpp"
+#include "time.hpp"
+
+#include <glad/gl.h>
 
 #include <SDL3_image/SDL_image.h>
 
@@ -14,19 +17,119 @@ bool Game::init()
         return false;
     }
 
-    if (!SDL_CreateWindowAndRenderer(
-            "GEP 26S",
-            kDefaultWidth,
-            kDefaultHeight,
-            SDL_WINDOW_RESIZABLE,
-            &m_window,
-            &m_renderer))
+    if (!initWindowAndContext())
     {
-        std::cerr << "SDL_CreateWindowAndRenderer failed: "
-                  << SDL_GetError() << std::endl;
         return false;
     }
 
+    if (!initGlad())
+    {
+        return false;
+    }
+
+    m_renderer = SDL_CreateRenderer(m_window, "opengl");
+    if (m_renderer == nullptr)
+    {
+        std::cerr << "SDL_CreateRenderer(opengl) failed: " << SDL_GetError()
+                  << ", falling back to default driver" << std::endl;
+
+        m_renderer = SDL_CreateRenderer(m_window, nullptr);
+        if (m_renderer == nullptr)
+        {
+            std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << std::endl;
+            return false;
+        }
+    }
+
+    if (!loadImage())
+    {
+        return false;
+    }
+
+    m_isRunning = true;
+
+    std::cout << "Game initialized. Window " << kDefaultWidth
+              << "x" << kDefaultHeight << std::endl;
+    std::cout << "WASD = move, ESC = quit" << std::endl;
+
+    return true;
+}
+
+bool Game::initWindowAndContext()
+{
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 6);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+    m_window = SDL_CreateWindow(
+        "GEP 26S",
+        kDefaultWidth,
+        kDefaultHeight,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+
+    if (m_window == nullptr)
+    {
+        std::cerr << "SDL_CreateWindow failed: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    m_glContext = SDL_GL_CreateContext(m_window);
+    if (m_glContext == nullptr)
+    {
+        std::cerr << "SDL_GL_CreateContext failed: " << SDL_GetError() << std::endl;
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr;
+        return false;
+    }
+
+    if (!SDL_GL_MakeCurrent(m_window, m_glContext))
+    {
+        std::cerr << "SDL_GL_MakeCurrent failed: " << SDL_GetError() << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool Game::initGlad()
+{
+    const int version = gladLoadGL(reinterpret_cast<GLADloadfunc>(SDL_GL_GetProcAddress));
+
+    if (version == 0)
+    {
+        std::cerr << "gladLoadGL failed: could not load OpenGL function pointers"
+                  << std::endl;
+
+        SDL_GL_DestroyContext(m_glContext);
+        m_glContext = nullptr;
+
+        SDL_DestroyWindow(m_window);
+        m_window = nullptr;
+
+        SDL_Quit();
+        return false;
+    }
+
+    std::cout << "GLAD loaded OpenGL "
+              << GLAD_VERSION_MAJOR(version) << "."
+              << GLAD_VERSION_MINOR(version) << std::endl;
+
+    const GLubyte* renderer = glGetString(GL_RENDERER);
+    const GLubyte* glVersion = glGetString(GL_VERSION);
+
+    if (renderer != nullptr && glVersion != nullptr)
+    {
+        std::cout << "Renderer: " << reinterpret_cast<const char*>(renderer) << std::endl;
+        std::cout << "Version:  " << reinterpret_cast<const char*>(glVersion) << std::endl;
+    }
+
+    return true;
+}
+
+bool Game::loadImage()
+{
     const char* basePath = SDL_GetBasePath();
     if (basePath == nullptr)
     {
@@ -53,15 +156,6 @@ bool Game::init()
     m_imageX = (static_cast<float>(kDefaultWidth)  - m_imageW) * 0.5f;
     m_imageY = (static_cast<float>(kDefaultHeight) - m_imageH) * 0.5f;
 
-    m_lastTicks = SDL_GetTicks();
-    m_isRunning = true;
-
-    std::cout << "Game initialized. Window " << kDefaultWidth
-              << "x" << kDefaultHeight << std::endl;
-    std::cout << "Image " << m_imageW << "x" << m_imageH
-              << " loaded from " << imagePath << std::endl;
-    std::cout << "WASD = move, ESC = quit" << std::endl;
-
     return true;
 }
 
@@ -69,12 +163,10 @@ void Game::run()
 {
     while (m_isRunning)
     {
-        const Uint64 now       = SDL_GetTicks();
-        const float  deltaTime = static_cast<float>(now - m_lastTicks) / 1000.0f;
-        m_lastTicks = now;
+        Time::Instance().Tick();
 
         processEvents();
-        update(deltaTime);
+        update(Time::Instance().GetDeltaTime());
         render();
     }
 }
@@ -91,6 +183,12 @@ void Game::shutdown()
     {
         SDL_DestroyRenderer(m_renderer);
         m_renderer = nullptr;
+    }
+
+    if (m_glContext != nullptr)
+    {
+        SDL_GL_DestroyContext(m_glContext);
+        m_glContext = nullptr;
     }
 
     if (m_window != nullptr)
@@ -149,15 +247,6 @@ void Game::update(float deltaTime)
     if (input.IsKeyPressed(SDLK_D)) { m_imageX += distance; }
 
     clampImageToWindow();
-
-    if (input.IsMouseDown(SDL_BUTTON_LEFT))
-    {
-        std::cout << "Left mouse button down." << std::endl;
-    }
-    if (input.IsMouseUp(SDL_BUTTON_LEFT))
-    {
-        std::cout << "Left mouse button up." << std::endl;
-    }
 }
 
 void Game::clampImageToWindow()
