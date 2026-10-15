@@ -6,6 +6,12 @@ add_executable(GEP26S
     inputmanager.hpp
     time.cpp
     time.hpp
+    file_loader.cpp
+    file_loader.hpp
+    shader.cpp
+    shader.hpp
+    renderer2d.cpp
+    renderer2d.hpp
 )
 
 target_include_directories(GEP26S PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

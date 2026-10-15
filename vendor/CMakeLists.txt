@@ -13,6 +13,7 @@ FetchContent_Declare(
     GIT_TAG        release-3.4.16
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
+    GIT_SUBMODULES ""
 )
 
 FetchContent_MakeAvailable(SDL3)
@@ -34,6 +35,7 @@ FetchContent_Declare(
     GIT_TAG        release-3.4.6
     GIT_SHALLOW    TRUE
     GIT_PROGRESS   TRUE
+    GIT_SUBMODULES ""
 )
 
 FetchContent_MakeAvailable(SDL3_image)

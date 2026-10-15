@@ -4,8 +4,6 @@
 
 #include <glad/gl.h>
 
-#include <SDL3_image/SDL_image.h>
-
 #include <iostream>
 #include <string>
 
@@ -27,30 +25,28 @@ bool Game::init()
         return false;
     }
 
-    m_renderer = SDL_CreateRenderer(m_window, "opengl");
-    if (m_renderer == nullptr)
+    const char* basePath = SDL_GetBasePath();
+    if (basePath == nullptr)
     {
-        std::cerr << "SDL_CreateRenderer(opengl) failed: " << SDL_GetError()
-                  << ", falling back to default driver" << std::endl;
-
-        m_renderer = SDL_CreateRenderer(m_window, nullptr);
-        if (m_renderer == nullptr)
-        {
-            std::cerr << "SDL_CreateRenderer failed: " << SDL_GetError() << std::endl;
-            return false;
-        }
-    }
-
-    if (!loadImage())
-    {
+        std::cerr << "SDL_GetBasePath failed: " << SDL_GetError() << std::endl;
         return false;
     }
+
+    const std::string shaderDirectory = std::string(basePath) + "assets/shaders/";
+
+    if (!m_renderer.Init(shaderDirectory))
+    {
+        std::cerr << "Renderer2D initialization failed" << std::endl;
+        return false;
+    }
+
+    m_renderer.SetViewport(kDefaultWidth, kDefaultHeight);
 
     m_isRunning = true;
 
     std::cout << "Game initialized. Window " << kDefaultWidth
               << "x" << kDefaultHeight << std::endl;
-    std::cout << "WASD = move, ESC = quit" << std::endl;
+    std::cout << "ESC = quit" << std::endl;
 
     return true;
 }
@@ -90,6 +86,8 @@ bool Game::initWindowAndContext()
         return false;
     }
 
+    SDL_GL_SetSwapInterval(1);
+
     return true;
 }
 
@@ -116,7 +114,7 @@ bool Game::initGlad()
               << GLAD_VERSION_MAJOR(version) << "."
               << GLAD_VERSION_MINOR(version) << std::endl;
 
-    const GLubyte* renderer = glGetString(GL_RENDERER);
+    const GLubyte* renderer  = glGetString(GL_RENDERER);
     const GLubyte* glVersion = glGetString(GL_VERSION);
 
     if (renderer != nullptr && glVersion != nullptr)
@@ -124,37 +122,6 @@ bool Game::initGlad()
         std::cout << "Renderer: " << reinterpret_cast<const char*>(renderer) << std::endl;
         std::cout << "Version:  " << reinterpret_cast<const char*>(glVersion) << std::endl;
     }
-
-    return true;
-}
-
-bool Game::loadImage()
-{
-    const char* basePath = SDL_GetBasePath();
-    if (basePath == nullptr)
-    {
-        std::cerr << "SDL_GetBasePath failed: " << SDL_GetError() << std::endl;
-        return false;
-    }
-
-    const std::string imagePath = std::string(basePath) + "assets/awesomeface.png";
-
-    m_texture = IMG_LoadTexture(m_renderer, imagePath.c_str());
-    if (m_texture == nullptr)
-    {
-        std::cerr << "IMG_LoadTexture failed for " << imagePath
-                  << ": " << SDL_GetError() << std::endl;
-        return false;
-    }
-
-    if (!SDL_GetTextureSize(m_texture, &m_imageW, &m_imageH))
-    {
-        std::cerr << "SDL_GetTextureSize failed: " << SDL_GetError() << std::endl;
-        return false;
-    }
-
-    m_imageX = (static_cast<float>(kDefaultWidth)  - m_imageW) * 0.5f;
-    m_imageY = (static_cast<float>(kDefaultHeight) - m_imageH) * 0.5f;
 
     return true;
 }
@@ -173,17 +140,7 @@ void Game::run()
 
 void Game::shutdown()
 {
-    if (m_texture != nullptr)
-    {
-        SDL_DestroyTexture(m_texture);
-        m_texture = nullptr;
-    }
-
-    if (m_renderer != nullptr)
-    {
-        SDL_DestroyRenderer(m_renderer);
-        m_renderer = nullptr;
-    }
+    m_renderer.Shutdown();
 
     if (m_glContext != nullptr)
     {
@@ -221,7 +178,7 @@ void Game::processEvents()
             SDL_GetWindowSize(m_window, &width, &height);
             std::cout << "Window resized to " << width << "x" << height << std::endl;
 
-            clampImageToWindow();
+            m_renderer.SetViewport(width, height);
         }
 
         InputManager::Instance().ProcessEvent(event);
@@ -230,52 +187,22 @@ void Game::processEvents()
 
 void Game::update(float deltaTime)
 {
+    (void)deltaTime;
+
     const InputManager& input = InputManager::Instance();
 
     if (input.IsKeyDown(SDLK_ESCAPE))
     {
         std::cout << "Escape pressed." << std::endl;
         m_isRunning = false;
-        return;
     }
-
-    const float distance = kMoveSpeed * deltaTime;
-
-    if (input.IsKeyPressed(SDLK_W)) { m_imageY -= distance; }
-    if (input.IsKeyPressed(SDLK_S)) { m_imageY += distance; }
-    if (input.IsKeyPressed(SDLK_A)) { m_imageX -= distance; }
-    if (input.IsKeyPressed(SDLK_D)) { m_imageX += distance; }
-
-    clampImageToWindow();
-}
-
-void Game::clampImageToWindow()
-{
-    int outputW = 0;
-    int outputH = 0;
-
-    if (!SDL_GetRenderOutputSize(m_renderer, &outputW, &outputH))
-    {
-        return;
-    }
-
-    const float maxX = static_cast<float>(outputW) - m_imageW;
-    const float maxY = static_cast<float>(outputH) - m_imageH;
-
-    if (m_imageX < 0.0f) { m_imageX = 0.0f; }
-    if (m_imageY < 0.0f) { m_imageY = 0.0f; }
-    if (m_imageX > maxX) { m_imageX = maxX; }
-    if (m_imageY > maxY) { m_imageY = maxY; }
 }
 
 void Game::render()
 {
-    SDL_SetRenderDrawColor(m_renderer, 30, 30, 40, 255);
-    SDL_RenderClear(m_renderer);
+    m_renderer.Begin();
+    m_renderer.DrawQuad();
+    m_renderer.End();
 
-    const SDL_FRect destination{ m_imageX, m_imageY, m_imageW, m_imageH };
-
-    SDL_RenderTexture(m_renderer, m_texture, nullptr, &destination);
-
-    SDL_RenderPresent(m_renderer);
+    SDL_GL_SwapWindow(m_window);
 }
