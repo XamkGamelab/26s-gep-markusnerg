@@ -7,16 +7,18 @@
 namespace
 {
     const float kQuadVertices[] = {
-        -0.5f, -0.5f,
-         0.5f, -0.5f,
-         0.5f,  0.5f,
-        -0.5f,  0.5f
+        -0.5f, -0.5f,  0.0f, 0.0f,
+         0.5f, -0.5f,  1.0f, 0.0f,
+         0.5f,  0.5f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.0f, 1.0f
     };
 
     const unsigned int kQuadIndices[] = {
         0, 1, 2,
         2, 3, 0
     };
+
+    constexpr int kVertexStride = 4;
 }
 
 Renderer2D::~Renderer2D()
@@ -42,6 +44,11 @@ bool Renderer2D::Init(const std::string& shaderDirectory)
         return false;
     }
 
+    m_shader.SetInt("uTexture", 0);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
     std::cout << "Renderer2D initialized" << std::endl;
     return true;
 }
@@ -65,8 +72,14 @@ bool Renderer2D::CreateQuadGeometry()
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(kQuadIndices), kQuadIndices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE,
+        kVertexStride * sizeof(float), nullptr);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+        kVertexStride * sizeof(float),
+        reinterpret_cast<const void*>(2 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
@@ -100,7 +113,10 @@ void Renderer2D::Shutdown()
 
 void Renderer2D::SetViewport(int width, int height)
 {
-    glViewport(0, 0, width, height);
+    m_viewportWidth  = width  > 0 ? width  : 1;
+    m_viewportHeight = height > 0 ? height : 1;
+
+    glViewport(0, 0, m_viewportWidth, m_viewportHeight);
 }
 
 void Renderer2D::SetClearColor(float red, float green, float blue, float alpha)
@@ -111,6 +127,36 @@ void Renderer2D::SetClearColor(float red, float green, float blue, float alpha)
     m_clearAlpha = alpha;
 }
 
+void Renderer2D::BuildTransform(const Texture& texture, float* outMatrix) const
+{
+    const float viewportAspect = static_cast<float>(m_viewportWidth)
+                               / static_cast<float>(m_viewportHeight);
+
+    float textureAspect = 1.0f;
+    if (texture.GetHeight() > 0)
+    {
+        textureAspect = static_cast<float>(texture.GetWidth())
+                      / static_cast<float>(texture.GetHeight());
+    }
+
+    float scaleX = kQuadScale;
+    float scaleY = kQuadScale;
+
+    if (textureAspect > viewportAspect)
+    {
+        scaleY = kQuadScale * (viewportAspect / textureAspect);
+    }
+    else
+    {
+        scaleX = kQuadScale * (textureAspect / viewportAspect);
+    }
+
+    outMatrix[0]  = scaleX; outMatrix[1]  = 0.0f;   outMatrix[2]  = 0.0f; outMatrix[3]  = 0.0f;
+    outMatrix[4]  = 0.0f;   outMatrix[5]  = scaleY; outMatrix[6]  = 0.0f; outMatrix[7]  = 0.0f;
+    outMatrix[8]  = 0.0f;   outMatrix[9]  = 0.0f;   outMatrix[10] = 1.0f; outMatrix[11] = 0.0f;
+    outMatrix[12] = 0.0f;   outMatrix[13] = 0.0f;   outMatrix[14] = 0.0f; outMatrix[15] = 1.0f;
+}
+
 void Renderer2D::Begin()
 {
     glClearColor(m_clearRed, m_clearGreen, m_clearBlue, m_clearAlpha);
@@ -119,11 +165,21 @@ void Renderer2D::Begin()
     m_shader.Bind();
 }
 
-void Renderer2D::DrawQuad()
+void Renderer2D::DrawQuad(const Texture& texture)
 {
+    float transform[16];
+    BuildTransform(texture, transform);
+
+    m_shader.SetMat4("uTransform", transform);
+    m_shader.SetInt("uTexture", 0);
+
+    texture.Bind(0);
+
     glBindVertexArray(m_vertexArray);
     glDrawElements(GL_TRIANGLES, kQuadIndexCount, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
+
+    texture.Unbind();
 }
 
 void Renderer2D::End()

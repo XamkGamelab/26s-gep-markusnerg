@@ -126,6 +126,61 @@ void Shader::Unbind() const
     glUseProgram(0);
 }
 
+GLint Shader::GetUniformLocation(const std::string& name)
+{
+    const auto cached = m_uniformLocations.find(name);
+    if (cached != m_uniformLocations.end())
+    {
+        return cached->second;
+    }
+
+    const GLint location = glGetUniformLocation(m_program, name.c_str());
+
+    if (location == -1)
+    {
+        std::cerr << "Shader: uniform '" << name << "' not found or unused" << std::endl;
+    }
+
+    m_uniformLocations[name] = location;
+    return location;
+}
+
+void Shader::SetInt(const std::string& name, int value)
+{
+    const GLint location = GetUniformLocation(name);
+    if (location == -1)
+    {
+        return;
+    }
+
+    Bind();
+    glUniform1i(location, value);
+}
+
+void Shader::SetFloat(const std::string& name, float value)
+{
+    const GLint location = GetUniformLocation(name);
+    if (location == -1)
+    {
+        return;
+    }
+
+    Bind();
+    glUniform1f(location, value);
+}
+
+void Shader::SetMat4(const std::string& name, const float* values)
+{
+    const GLint location = GetUniformLocation(name);
+    if (location == -1)
+    {
+        return;
+    }
+
+    Bind();
+    glUniformMatrix4fv(location, 1, GL_FALSE, values);
+}
+
 void Shader::Release()
 {
     if (m_program != 0)
@@ -133,6 +188,8 @@ void Shader::Release()
         glDeleteProgram(m_program);
         m_program = 0;
     }
+
+    m_uniformLocations.clear();
 }
 
 bool Shader::IsValid() const

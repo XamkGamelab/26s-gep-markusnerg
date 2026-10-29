@@ -3,6 +3,7 @@
 #include <glad/gl.h>
 
 #include <string>
+#include <unordered_map>
 
 class Shader
 {
@@ -20,6 +21,10 @@ public:
     void Bind() const;
     void Unbind() const;
 
+    void SetInt(const std::string& name, int value);
+    void SetFloat(const std::string& name, float value);
+    void SetMat4(const std::string& name, const float* values);
+
     void Release();
 
     bool IsValid() const;
@@ -29,5 +34,9 @@ private:
     static bool CheckCompileStatus(GLuint shader, const std::string& path);
     static bool CheckLinkStatus(GLuint program);
 
+    GLint GetUniformLocation(const std::string& name);
+
     GLuint m_program = 0;
+
+    std::unordered_map<std::string, GLint> m_uniformLocations;
 };

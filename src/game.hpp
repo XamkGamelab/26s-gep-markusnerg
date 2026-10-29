@@ -1,6 +1,7 @@
 #pragma once
 
 #include "renderer2d.hpp"
+#include "texture.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -23,6 +24,7 @@ private:
     SDL_GLContext m_glContext = nullptr;
 
     Renderer2D m_renderer;
+    Texture    m_texture;
 
     bool m_isRunning = false;
 

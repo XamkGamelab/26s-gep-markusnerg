@@ -32,11 +32,18 @@ bool Game::init()
         return false;
     }
 
-    const std::string shaderDirectory = std::string(basePath) + "assets/shaders/";
+    const std::string assetDirectory  = std::string(basePath) + "assets/";
+    const std::string shaderDirectory = assetDirectory + "shaders/";
 
     if (!m_renderer.Init(shaderDirectory))
     {
         std::cerr << "Renderer2D initialization failed" << std::endl;
+        return false;
+    }
+
+    if (!m_texture.LoadFromFile(assetDirectory + "awesomeface.png"))
+    {
+        std::cerr << "Texture initialization failed" << std::endl;
         return false;
     }
 
@@ -140,6 +147,7 @@ void Game::run()
 
 void Game::shutdown()
 {
+    m_texture.Release();
     m_renderer.Shutdown();
 
     if (m_glContext != nullptr)
@@ -201,7 +209,7 @@ void Game::update(float deltaTime)
 void Game::render()
 {
     m_renderer.Begin();
-    m_renderer.DrawQuad();
+    m_renderer.DrawQuad(m_texture);
     m_renderer.End();
 
     SDL_GL_SwapWindow(m_window);

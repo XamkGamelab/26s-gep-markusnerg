@@ -10,6 +10,8 @@ add_executable(GEP26S
     file_loader.hpp
     shader.cpp
     shader.hpp
+    texture.cpp
+    texture.hpp
     renderer2d.cpp
     renderer2d.hpp
 )
