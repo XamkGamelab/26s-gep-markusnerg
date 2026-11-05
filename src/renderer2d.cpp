@@ -113,10 +113,10 @@ void Renderer2D::Shutdown()
 
 void Renderer2D::SetViewport(int width, int height)
 {
-    m_viewportWidth  = width  > 0 ? width  : 1;
-    m_viewportHeight = height > 0 ? height : 1;
+    const int safeWidth  = width  > 0 ? width  : 1;
+    const int safeHeight = height > 0 ? height : 1;
 
-    glViewport(0, 0, m_viewportWidth, m_viewportHeight);
+    glViewport(0, 0, safeWidth, safeHeight);
 }
 
 void Renderer2D::SetClearColor(float red, float green, float blue, float alpha)
@@ -127,50 +127,19 @@ void Renderer2D::SetClearColor(float red, float green, float blue, float alpha)
     m_clearAlpha = alpha;
 }
 
-void Renderer2D::BuildTransform(const Texture& texture, float* outMatrix) const
-{
-    const float viewportAspect = static_cast<float>(m_viewportWidth)
-                               / static_cast<float>(m_viewportHeight);
-
-    float textureAspect = 1.0f;
-    if (texture.GetHeight() > 0)
-    {
-        textureAspect = static_cast<float>(texture.GetWidth())
-                      / static_cast<float>(texture.GetHeight());
-    }
-
-    float scaleX = kQuadScale;
-    float scaleY = kQuadScale;
-
-    if (textureAspect > viewportAspect)
-    {
-        scaleY = kQuadScale * (viewportAspect / textureAspect);
-    }
-    else
-    {
-        scaleX = kQuadScale * (textureAspect / viewportAspect);
-    }
-
-    outMatrix[0]  = scaleX; outMatrix[1]  = 0.0f;   outMatrix[2]  = 0.0f; outMatrix[3]  = 0.0f;
-    outMatrix[4]  = 0.0f;   outMatrix[5]  = scaleY; outMatrix[6]  = 0.0f; outMatrix[7]  = 0.0f;
-    outMatrix[8]  = 0.0f;   outMatrix[9]  = 0.0f;   outMatrix[10] = 1.0f; outMatrix[11] = 0.0f;
-    outMatrix[12] = 0.0f;   outMatrix[13] = 0.0f;   outMatrix[14] = 0.0f; outMatrix[15] = 1.0f;
-}
-
-void Renderer2D::Begin()
+void Renderer2D::Begin(const Camera& camera)
 {
     glClearColor(m_clearRed, m_clearGreen, m_clearBlue, m_clearAlpha);
     glClear(GL_COLOR_BUFFER_BIT);
 
     m_shader.Bind();
+    m_shader.SetMat4("uView", camera.GetViewMatrix());
+    m_shader.SetMat4("uProjection", camera.GetProjectionMatrix());
 }
 
-void Renderer2D::DrawQuad(const Texture& texture)
+void Renderer2D::DrawQuad(const Texture& texture, const Transform& transform)
 {
-    float transform[16];
-    BuildTransform(texture, transform);
-
-    m_shader.SetMat4("uTransform", transform);
+    m_shader.SetMat4("uModel", transform.GetModelMatrix());
     m_shader.SetInt("uTexture", 0);
 
     texture.Bind(0);

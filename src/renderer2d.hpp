@@ -1,7 +1,9 @@
 #pragma once
 
+#include "camera.hpp"
 #include "shader.hpp"
 #include "texture.hpp"
+#include "transform.hpp"
 
 #include <string>
 
@@ -22,13 +24,12 @@ public:
     void SetViewport(int width, int height);
     void SetClearColor(float red, float green, float blue, float alpha);
 
-    void Begin();
-    void DrawQuad(const Texture& texture);
+    void Begin(const Camera& camera);
+    void DrawQuad(const Texture& texture, const Transform& transform);
     void End();
 
 private:
     bool CreateQuadGeometry();
-    void BuildTransform(const Texture& texture, float* outMatrix) const;
 
     Shader m_shader;
 
@@ -36,14 +37,10 @@ private:
     unsigned int m_vertexBuffer = 0;
     unsigned int m_indexBuffer  = 0;
 
-    int m_viewportWidth  = 1;
-    int m_viewportHeight = 1;
-
-    float m_clearRed   = 0.12f;
-    float m_clearGreen = 0.12f;
-    float m_clearBlue  = 0.16f;
+    float m_clearRed   = 0.10f;
+    float m_clearGreen = 0.11f;
+    float m_clearBlue  = 0.15f;
     float m_clearAlpha = 1.0f;
 
-    static constexpr int   kQuadIndexCount = 6;
-    static constexpr float kQuadScale      = 0.8f;
+    static constexpr int kQuadIndexCount = 6;
 };

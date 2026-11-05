@@ -12,6 +12,10 @@ add_executable(GEP26S
     shader.hpp
     texture.cpp
     texture.hpp
+    transform.cpp
+    transform.hpp
+    camera.cpp
+    camera.hpp
     renderer2d.cpp
     renderer2d.hpp
 )
@@ -22,6 +26,7 @@ target_link_libraries(GEP26S PRIVATE
     SDL3::SDL3
     SDL3_image::SDL3_image
     glad
+    glm::glm
 )
 
 add_custom_target(AssetCopy

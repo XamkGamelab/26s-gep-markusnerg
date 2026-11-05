@@ -4,6 +4,7 @@
 
 #include <glad/gl.h>
 
+#include <cmath>
 #include <iostream>
 #include <string>
 
@@ -48,14 +49,32 @@ bool Game::init()
     }
 
     m_renderer.SetViewport(kDefaultWidth, kDefaultHeight);
+    m_camera.SetViewportSize(kDefaultWidth, kDefaultHeight);
+
+    initScene();
 
     m_isRunning = true;
 
     std::cout << "Game initialized. Window " << kDefaultWidth
               << "x" << kDefaultHeight << std::endl;
-    std::cout << "ESC = quit" << std::endl;
+    std::cout << "WASD = move camera, Q/E = zoom, R = reset camera, ESC = quit" << std::endl;
 
     return true;
+}
+
+void Game::initScene()
+{
+    m_leftQuad.SetPosition(-2.0f, 0.0f);
+    m_leftQuad.SetScale(2.0f);
+    m_leftQuad.SetRotation(0.0f);
+
+    m_rightQuad.SetPosition(2.0f, 0.0f);
+    m_rightQuad.SetScale(1.5f);
+    m_rightQuad.SetRotation(0.0f);
+
+    m_smallQuad.SetPosition(0.0f, 1.8f);
+    m_smallQuad.SetScale(0.8f);
+    m_smallQuad.SetRotation(45.0f);
 }
 
 bool Game::initWindowAndContext()
@@ -187,6 +206,7 @@ void Game::processEvents()
             std::cout << "Window resized to " << width << "x" << height << std::endl;
 
             m_renderer.SetViewport(width, height);
+            m_camera.SetViewportSize(width, height);
         }
 
         InputManager::Instance().ProcessEvent(event);
@@ -195,21 +215,74 @@ void Game::processEvents()
 
 void Game::update(float deltaTime)
 {
-    (void)deltaTime;
-
     const InputManager& input = InputManager::Instance();
 
     if (input.IsKeyDown(SDLK_ESCAPE))
     {
         std::cout << "Escape pressed." << std::endl;
         m_isRunning = false;
+        return;
+    }
+
+    m_elapsed += deltaTime;
+
+    m_rightQuad.Rotate(kRotationSpeed * deltaTime);
+
+    const float pulse = 0.8f + 0.3f * std::sin(m_elapsed * 2.0f);
+    m_smallQuad.SetScale(pulse);
+
+    updateCamera(deltaTime);
+}
+
+void Game::updateCamera(float deltaTime)
+{
+    const InputManager& input = InputManager::Instance();
+
+    glm::vec3 movement{ 0.0f, 0.0f, 0.0f };
+
+    if (input.IsKeyPressed(SDLK_W)) { movement.y += 1.0f; }
+    if (input.IsKeyPressed(SDLK_S)) { movement.y -= 1.0f; }
+    if (input.IsKeyPressed(SDLK_A)) { movement.x -= 1.0f; }
+    if (input.IsKeyPressed(SDLK_D)) { movement.x += 1.0f; }
+
+    if (movement.x != 0.0f || movement.y != 0.0f)
+    {
+        m_camera.Move(movement * kCameraSpeed * deltaTime);
+    }
+
+    if (input.IsKeyPressed(SDLK_Q))
+    {
+        m_camera.SetZoom(m_camera.GetZoom() + deltaTime * 2.0f);
+    }
+
+    if (input.IsKeyPressed(SDLK_E))
+    {
+        m_camera.SetZoom(m_camera.GetZoom() - deltaTime * 2.0f);
+    }
+
+    if (input.IsKeyDown(SDLK_R))
+    {
+        m_camera.SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+        m_camera.SetZoom(3.0f);
+        std::cout << "Camera reset" << std::endl;
+    }
+
+    if (input.IsKeyUp(SDLK_W) || input.IsKeyUp(SDLK_A) ||
+        input.IsKeyUp(SDLK_S) || input.IsKeyUp(SDLK_D))
+    {
+        const glm::vec3& position = m_camera.GetPosition();
+        std::cout << "Camera position: " << position.x << ", " << position.y << std::endl;
     }
 }
 
 void Game::render()
 {
-    m_renderer.Begin();
-    m_renderer.DrawQuad(m_texture);
+    m_renderer.Begin(m_camera);
+
+    m_renderer.DrawQuad(m_texture, m_leftQuad);
+    m_renderer.DrawQuad(m_texture, m_rightQuad);
+    m_renderer.DrawQuad(m_texture, m_smallQuad);
+
     m_renderer.End();
 
     SDL_GL_SwapWindow(m_window);

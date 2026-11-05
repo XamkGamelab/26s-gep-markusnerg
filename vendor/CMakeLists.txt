@@ -40,6 +40,21 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(SDL3_image)
 
+set(GLM_BUILD_LIBRARY OFF CACHE BOOL "" FORCE)
+set(GLM_BUILD_TESTS   OFF CACHE BOOL "" FORCE)
+set(GLM_BUILD_INSTALL OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    glm
+    GIT_REPOSITORY https://github.com/g-truc/glm.git
+    GIT_TAG        1.0.1
+    GIT_SHALLOW    TRUE
+    GIT_PROGRESS   TRUE
+    GIT_SUBMODULES ""
+)
+
+FetchContent_MakeAvailable(glm)
+
 add_library(glad STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/glad/src/gl.c
 )

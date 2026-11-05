@@ -1,6 +1,8 @@
 #include "shader.hpp"
 #include "file_loader.hpp"
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 #include <vector>
 
@@ -169,7 +171,7 @@ void Shader::SetFloat(const std::string& name, float value)
     glUniform1f(location, value);
 }
 
-void Shader::SetMat4(const std::string& name, const float* values)
+void Shader::SetVec4(const std::string& name, const glm::vec4& value)
 {
     const GLint location = GetUniformLocation(name);
     if (location == -1)
@@ -178,7 +180,19 @@ void Shader::SetMat4(const std::string& name, const float* values)
     }
 
     Bind();
-    glUniformMatrix4fv(location, 1, GL_FALSE, values);
+    glUniform4fv(location, 1, glm::value_ptr(value));
+}
+
+void Shader::SetMat4(const std::string& name, const glm::mat4& value)
+{
+    const GLint location = GetUniformLocation(name);
+    if (location == -1)
+    {
+        return;
+    }
+
+    Bind();
+    glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(value));
 }
 
 void Shader::Release()
