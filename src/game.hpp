@@ -1,6 +1,7 @@
 #pragma once
 
 #include "camera.hpp"
+#include "gameobject.hpp"
 #include "renderer2d.hpp"
 #include "texture.hpp"
 #include "transform.hpp"
@@ -18,6 +19,8 @@ private:
     bool initWindowAndContext();
     bool initGlad();
     void initScene();
+    void setupGameObjects();
+    void demonstrateComponents();
 
     void processEvents();
     void update(float deltaTime);
@@ -34,6 +37,9 @@ private:
     Transform m_leftQuad;
     Transform m_rightQuad;
     Transform m_smallQuad;
+
+    GameObject m_player{ "Player" };
+    GameObject m_prop{ "Prop" };
 
     float m_elapsed = 0.0f;
 

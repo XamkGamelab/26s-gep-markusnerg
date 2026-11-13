@@ -1,5 +1,6 @@
 #include "game.hpp"
 #include "inputmanager.hpp"
+#include "testcomponent.hpp"
 #include "time.hpp"
 
 #include <glad/gl.h>
@@ -52,6 +53,8 @@ bool Game::init()
     m_camera.SetViewportSize(kDefaultWidth, kDefaultHeight);
 
     initScene();
+    setupGameObjects();
+    demonstrateComponents();
 
     m_isRunning = true;
 
@@ -75,6 +78,45 @@ void Game::initScene()
     m_smallQuad.SetPosition(0.0f, 1.8f);
     m_smallQuad.SetScale(0.8f);
     m_smallQuad.SetRotation(45.0f);
+}
+
+void Game::setupGameObjects()
+{
+    m_player.AddComponent<TestComponent>(2.0f);
+    m_player.AddComponent<CounterComponent>();
+
+    m_prop.AddComponent<TestComponent>(3.0f);
+}
+
+void Game::demonstrateComponents()
+{
+    std::cout << "--- component system ---" << std::endl;
+
+    std::cout << m_player.GetName() << " has "
+              << m_player.GetComponentCount() << " components" << std::endl;
+
+    TestComponent* playerTest = m_player.GetComponent<TestComponent>();
+    std::cout << "GetComponent<TestComponent>() on " << m_player.GetName()
+              << ": " << (playerTest != nullptr ? "found" : "nullptr") << std::endl;
+
+    if (playerTest != nullptr && playerTest->GetOwner() != nullptr)
+    {
+        std::cout << "  owner reported by component: "
+                  << playerTest->GetOwner()->GetName() << std::endl;
+    }
+
+    CounterComponent* playerCounter = m_player.GetComponent<CounterComponent>();
+    std::cout << "GetComponent<CounterComponent>() on " << m_player.GetName()
+              << ": " << (playerCounter != nullptr ? "found" : "nullptr") << std::endl;
+
+    std::cout << m_prop.GetName() << " has "
+              << m_prop.GetComponentCount() << " components" << std::endl;
+
+    CounterComponent* propCounter = m_prop.GetComponent<CounterComponent>();
+    std::cout << "GetComponent<CounterComponent>() on " << m_prop.GetName()
+              << ": " << (propCounter != nullptr ? "found" : "nullptr") << std::endl;
+
+    std::cout << "------------------------" << std::endl;
 }
 
 bool Game::initWindowAndContext()
@@ -166,6 +208,13 @@ void Game::run()
 
 void Game::shutdown()
 {
+    const CounterComponent* counter = m_player.GetComponent<CounterComponent>();
+    if (counter != nullptr)
+    {
+        std::cout << "CounterComponent on " << m_player.GetName()
+                  << " counted " << counter->GetCount() << " updates" << std::endl;
+    }
+
     m_texture.Release();
     m_renderer.Shutdown();
 
@@ -225,6 +274,9 @@ void Game::update(float deltaTime)
     }
 
     m_elapsed += deltaTime;
+
+    m_player.Update(deltaTime);
+    m_prop.Update(deltaTime);
 
     m_rightQuad.Rotate(kRotationSpeed * deltaTime);
 

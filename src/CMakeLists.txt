@@ -18,6 +18,12 @@ add_executable(GEP26S
     camera.hpp
     renderer2d.cpp
     renderer2d.hpp
+    icomponent.cpp
+    icomponent.hpp
+    gameobject.cpp
+    gameobject.hpp
+    testcomponent.cpp
+    testcomponent.hpp
 )
 
 target_include_directories(GEP26S PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
