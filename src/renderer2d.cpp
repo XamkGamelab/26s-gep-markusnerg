@@ -1,5 +1,8 @@
 #include "renderer2d.hpp"
 
+#include "resourcemanager.hpp"
+#include "shader.hpp"
+
 #include <glad/gl.h>
 
 #include <iostream>
@@ -19,6 +22,8 @@ namespace
     };
 
     constexpr int kVertexStride = 4;
+
+    const char* kQuadShaderIdentifier = "quad";
 }
 
 Renderer2D::~Renderer2D()
@@ -31,7 +36,10 @@ bool Renderer2D::Init(const std::string& shaderDirectory)
     const std::string vertexPath   = shaderDirectory + "quad.vert.glsl";
     const std::string fragmentPath = shaderDirectory + "quad.frag.glsl";
 
-    if (!m_shader.LoadFromFiles(vertexPath, fragmentPath))
+    m_shader = ResourceManager::Instance().LoadShader(
+        kQuadShaderIdentifier, vertexPath, fragmentPath);
+
+    if (m_shader == nullptr)
     {
         std::cerr << "Renderer2D: shader creation failed" << std::endl;
         return false;
@@ -40,11 +48,10 @@ bool Renderer2D::Init(const std::string& shaderDirectory)
     if (!CreateQuadGeometry())
     {
         std::cerr << "Renderer2D: quad geometry creation failed" << std::endl;
-        m_shader.Release();
         return false;
     }
 
-    m_shader.SetInt("uTexture", 0);
+    m_shader->SetInt("uTexture", 0);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -108,7 +115,7 @@ void Renderer2D::Shutdown()
         m_vertexArray = 0;
     }
 
-    m_shader.Release();
+    m_shader = nullptr;
 }
 
 void Renderer2D::SetViewport(int width, int height)
@@ -132,15 +139,26 @@ void Renderer2D::Begin(const Camera& camera)
     glClearColor(m_clearRed, m_clearGreen, m_clearBlue, m_clearAlpha);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    m_shader.Bind();
-    m_shader.SetMat4("uView", camera.GetViewMatrix());
-    m_shader.SetMat4("uProjection", camera.GetProjectionMatrix());
+    if (m_shader == nullptr)
+    {
+        return;
+    }
+
+    m_shader->Bind();
+    m_shader->SetMat4("uView", camera.GetViewMatrix());
+    m_shader->SetMat4("uProjection", camera.GetProjectionMatrix());
 }
 
-void Renderer2D::DrawQuad(const Texture& texture, const Transform& transform)
+void Renderer2D::DrawQuad(const Texture& texture, const glm::mat4& model, const glm::vec4& color)
 {
-    m_shader.SetMat4("uModel", transform.GetModelMatrix());
-    m_shader.SetInt("uTexture", 0);
+    if (m_shader == nullptr)
+    {
+        return;
+    }
+
+    m_shader->SetMat4("uModel", model);
+    m_shader->SetVec4("uColor", color);
+    m_shader->SetInt("uTexture", 0);
 
     texture.Bind(0);
 
@@ -151,7 +169,25 @@ void Renderer2D::DrawQuad(const Texture& texture, const Transform& transform)
     texture.Unbind();
 }
 
+void Renderer2D::DrawQuad(const Texture& texture, const Transform& transform)
+{
+    DrawQuad(texture, transform.GetModelMatrix(), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
+}
+
+void Renderer2D::DrawQuad(const Texture& texture, const Transform& transform, const glm::vec4& color)
+{
+    DrawQuad(texture, transform.GetModelMatrix(), color);
+}
+
 void Renderer2D::End()
 {
-    m_shader.Unbind();
+    if (m_shader != nullptr)
+    {
+        m_shader->Unbind();
+    }
+}
+
+Shader* Renderer2D::GetShader() const
+{
+    return m_shader;
 }

@@ -1,12 +1,11 @@
 #pragma once
 
-#include "camera.hpp"
-#include "gameobject.hpp"
 #include "renderer2d.hpp"
-#include "texture.hpp"
-#include "transform.hpp"
+#include "scene.hpp"
 
 #include <SDL3/SDL.h>
+
+#include <string>
 
 class Game
 {
@@ -18,9 +17,8 @@ public:
 private:
     bool initWindowAndContext();
     bool initGlad();
-    void initScene();
-    void setupGameObjects();
-    void demonstrateComponents();
+    void buildScene();
+    void demonstrateSystems();
 
     void processEvents();
     void update(float deltaTime);
@@ -31,22 +29,14 @@ private:
     SDL_GLContext m_glContext = nullptr;
 
     Renderer2D m_renderer;
-    Camera     m_camera;
-    Texture    m_texture;
+    Scene      m_scene{ "MainScene" };
 
-    Transform m_leftQuad;
-    Transform m_rightQuad;
-    Transform m_smallQuad;
-
-    GameObject m_player{ "Player" };
-    GameObject m_prop{ "Prop" };
-
-    float m_elapsed = 0.0f;
+    std::string m_assetDirectory;
+    std::string m_facePath;
 
     bool m_isRunning = false;
 
     static constexpr int   kDefaultWidth  = 1280;
     static constexpr int   kDefaultHeight = 720;
     static constexpr float kCameraSpeed   = 3.0f;
-    static constexpr float kRotationSpeed = 60.0f;
 };

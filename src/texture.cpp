@@ -40,11 +40,48 @@ bool Texture::LoadFromFile(const std::string& path)
         return false;
     }
 
+    const bool uploaded = Upload(converted->pixels, converted->w, converted->h, converted->pitch);
+
+    SDL_DestroySurface(converted);
+
+    if (!uploaded)
+    {
+        std::cerr << "Texture: upload failed for " << path << std::endl;
+        return false;
+    }
+
+    std::cout << "Texture loaded: " << path << " (" << m_width
+              << "x" << m_height << ")" << std::endl;
+
+    return true;
+}
+
+bool Texture::CreateFromPixels(const unsigned char* pixels, int width, int height)
+{
+    Release();
+
+    if (pixels == nullptr || width <= 0 || height <= 0)
+    {
+        std::cerr << "Texture: invalid pixel data" << std::endl;
+        return false;
+    }
+
+    return Upload(pixels, width, height, width * 4);
+}
+
+bool Texture::CreateWhite()
+{
+    const unsigned char white[4] = { 255, 255, 255, 255 };
+
+    return CreateFromPixels(white, 1, 1);
+}
+
+bool Texture::Upload(const void* pixels, int width, int height, int pitch)
+{
     glGenTextures(1, &m_handle);
     if (m_handle == 0)
     {
-        std::cerr << "Texture: glGenTextures failed for " << path << std::endl;
-        SDL_DestroySurface(converted);
+        std::cerr << "Texture: glGenTextures failed" << std::endl;
         return false;
     }
 
@@ -56,31 +93,27 @@ bool Texture::LoadFromFile(const std::string& path)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    glPixelStorei(GL_UNPACK_ROW_LENGTH, converted->pitch / 4);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, pitch / 4);
 
     glTexImage2D(
         GL_TEXTURE_2D,
         0,
         GL_RGBA8,
-        converted->w,
-        converted->h,
+        width,
+        height,
         0,
         GL_RGBA,
         GL_UNSIGNED_BYTE,
-        converted->pixels);
+        pixels);
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
     glGenerateMipmap(GL_TEXTURE_2D);
 
-    m_width  = converted->w;
-    m_height = converted->h;
-
     glBindTexture(GL_TEXTURE_2D, 0);
-    SDL_DestroySurface(converted);
 
-    std::cout << "Texture loaded: " << path << " (" << m_width
-              << "x" << m_height << ")" << std::endl;
+    m_width  = width;
+    m_height = height;
 
     return true;
 }

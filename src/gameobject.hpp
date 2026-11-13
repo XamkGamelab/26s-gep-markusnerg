@@ -1,6 +1,7 @@
 #pragma once
 
 #include "icomponent.hpp"
+#include "transform.hpp"
 
 #include <memory>
 #include <string>
@@ -57,13 +58,23 @@ public:
 
     void Update(float deltaTime);
 
+    Transform& GetTransform();
+    const Transform& GetTransform() const;
+
     const std::string& GetName() const;
     void SetName(std::string name);
+
+    void SetActive(bool active);
+    bool IsActive() const;
 
     std::size_t GetComponentCount() const;
 
 private:
     std::string m_name = "GameObject";
+
+    Transform m_transform;
+
+    bool m_active = true;
 
     std::vector<std::unique_ptr<IComponent>> m_components;
 };

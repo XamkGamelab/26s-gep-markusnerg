@@ -1,6 +1,7 @@
 #include "testcomponent.hpp"
 #include "gameobject.hpp"
 
+#include <cmath>
 #include <iostream>
 
 TestComponent::TestComponent(GameObject* owner, float reportInterval)
@@ -59,4 +60,57 @@ int CounterComponent::GetCount() const
 void CounterComponent::Reset()
 {
     m_count = 0;
+}
+
+SpinComponent::SpinComponent(GameObject* owner, float degreesPerSecond)
+    : IComponent(owner)
+    , m_speed(degreesPerSecond)
+{
+}
+
+void SpinComponent::Update(float deltaTime)
+{
+    GameObject* owner = GetOwner();
+
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    owner->GetTransform().Rotate(m_speed * deltaTime);
+}
+
+void SpinComponent::SetSpeed(float degreesPerSecond)
+{
+    m_speed = degreesPerSecond;
+}
+
+float SpinComponent::GetSpeed() const
+{
+    return m_speed;
+}
+
+PulseComponent::PulseComponent(GameObject* owner, float baseScale,
+                               float amplitude, float frequency)
+    : IComponent(owner)
+    , m_baseScale(baseScale)
+    , m_amplitude(amplitude)
+    , m_frequency(frequency)
+{
+}
+
+void PulseComponent::Update(float deltaTime)
+{
+    GameObject* owner = GetOwner();
+
+    if (owner == nullptr)
+    {
+        return;
+    }
+
+    m_elapsed += deltaTime;
+
+    const float scale = m_baseScale + m_amplitude * std::sin(m_elapsed * m_frequency);
+
+    owner->GetTransform().SetScale(scale);
 }

@@ -1,13 +1,14 @@
 #include "game.hpp"
+
 #include "inputmanager.hpp"
+#include "resourcemanager.hpp"
+#include "spriterenderer.hpp"
 #include "testcomponent.hpp"
 #include "time.hpp"
 
 #include <glad/gl.h>
 
-#include <cmath>
 #include <iostream>
-#include <string>
 
 bool Game::init()
 {
@@ -34,89 +35,115 @@ bool Game::init()
         return false;
     }
 
-    const std::string assetDirectory  = std::string(basePath) + "assets/";
-    const std::string shaderDirectory = assetDirectory + "shaders/";
+    m_assetDirectory = std::string(basePath) + "assets/";
+    m_facePath       = m_assetDirectory + "awesomeface.png";
 
-    if (!m_renderer.Init(shaderDirectory))
+    if (!m_renderer.Init(m_assetDirectory + "shaders/"))
     {
         std::cerr << "Renderer2D initialization failed" << std::endl;
         return false;
     }
 
-    if (!m_texture.LoadFromFile(assetDirectory + "awesomeface.png"))
-    {
-        std::cerr << "Texture initialization failed" << std::endl;
-        return false;
-    }
-
     m_renderer.SetViewport(kDefaultWidth, kDefaultHeight);
-    m_camera.SetViewportSize(kDefaultWidth, kDefaultHeight);
+    m_scene.SetViewportSize(kDefaultWidth, kDefaultHeight);
 
-    initScene();
-    setupGameObjects();
-    demonstrateComponents();
+    buildScene();
+    demonstrateSystems();
 
     m_isRunning = true;
 
     std::cout << "Game initialized. Window " << kDefaultWidth
               << "x" << kDefaultHeight << std::endl;
-    std::cout << "WASD = move camera, Q/E = zoom, R = reset camera, ESC = quit" << std::endl;
+    std::cout << "WASD = move camera, Q/E = zoom, R = reset camera, "
+              << "X = remove GreenBox, ESC = quit" << std::endl;
 
     return true;
 }
 
-void Game::initScene()
+void Game::buildScene()
 {
-    m_leftQuad.SetPosition(-2.0f, 0.0f);
-    m_leftQuad.SetScale(2.0f);
-    m_leftQuad.SetRotation(0.0f);
+    ResourceManager& resources = ResourceManager::Instance();
 
-    m_rightQuad.SetPosition(2.0f, 0.0f);
-    m_rightQuad.SetScale(1.5f);
-    m_rightQuad.SetRotation(0.0f);
+    Texture* faceTexture = resources.LoadTexture(m_facePath);
 
-    m_smallQuad.SetPosition(0.0f, 1.8f);
-    m_smallQuad.SetScale(0.8f);
-    m_smallQuad.SetRotation(45.0f);
+    GameObject* background = m_scene.CreateGameObject("Background");
+    SpriteRenderer* backgroundSprite = background->AddComponent<SpriteRenderer>();
+    backgroundSprite->SetSize(16.0f, 9.0f);
+    backgroundSprite->SetColor(0.16f, 0.18f, 0.26f, 1.0f);
+    backgroundSprite->SetLayer(-10);
+
+    GameObject* face = m_scene.CreateGameObject("Face");
+    face->GetTransform().SetPosition(-2.5f, 0.0f);
+    SpriteRenderer* faceSprite = face->AddComponent<SpriteRenderer>();
+    faceSprite->SetTexture(faceTexture);
+    faceSprite->SetSize(2.0f, 2.0f);
+    faceSprite->SetLayer(0);
+    face->AddComponent<SpinComponent>(40.0f);
+    face->AddComponent<TestComponent>(3.0f);
+    face->AddComponent<CounterComponent>();
+
+    GameObject* secondFace = m_scene.CreateGameObject("FaceTwo");
+    secondFace->GetTransform().SetPosition(2.5f, 0.0f);
+    SpriteRenderer* secondSprite = secondFace->AddComponent<SpriteRenderer>();
+    secondSprite->SetTexture(resources.LoadTexture(m_facePath));
+    secondSprite->SetSize(2.0f, 2.0f);
+    secondSprite->SetLayer(0);
+    secondFace->AddComponent<PulseComponent>(1.0f, 0.25f, 2.0f);
+
+    GameObject* tintedFace = m_scene.CreateGameObject("TintedFace");
+    tintedFace->GetTransform().SetPosition(0.0f, 1.8f);
+    SpriteRenderer* tintedSprite = tintedFace->AddComponent<SpriteRenderer>();
+    tintedSprite->SetTexture(faceTexture);
+    tintedSprite->SetSize(1.4f, 1.4f);
+    tintedSprite->SetColor(1.0f, 0.4f, 0.4f, 1.0f);
+    tintedSprite->SetLayer(1);
+
+    GameObject* greenBox = m_scene.CreateGameObject("GreenBox");
+    greenBox->GetTransform().SetPosition(0.0f, -1.8f);
+    SpriteRenderer* boxSprite = greenBox->AddComponent<SpriteRenderer>();
+    boxSprite->SetSize(1.2f, 1.2f);
+    boxSprite->SetColor(0.3f, 0.8f, 0.4f, 1.0f);
+    boxSprite->SetLayer(1);
+    greenBox->AddComponent<SpinComponent>(-70.0f);
 }
 
-void Game::setupGameObjects()
+void Game::demonstrateSystems()
 {
-    m_player.AddComponent<TestComponent>(2.0f);
-    m_player.AddComponent<CounterComponent>();
+    ResourceManager& resources = ResourceManager::Instance();
 
-    m_prop.AddComponent<TestComponent>(3.0f);
-}
+    std::cout << "--- scene and resources ---" << std::endl;
 
-void Game::demonstrateComponents()
-{
-    std::cout << "--- component system ---" << std::endl;
+    std::cout << "Scene '" << m_scene.GetName() << "' contains "
+              << m_scene.GetGameObjectCount() << " game objects" << std::endl;
 
-    std::cout << m_player.GetName() << " has "
-              << m_player.GetComponentCount() << " components" << std::endl;
+    Texture* first  = resources.LoadTexture(m_facePath);
+    Texture* second = resources.LoadTexture(m_facePath);
 
-    TestComponent* playerTest = m_player.GetComponent<TestComponent>();
-    std::cout << "GetComponent<TestComponent>() on " << m_player.GetName()
-              << ": " << (playerTest != nullptr ? "found" : "nullptr") << std::endl;
+    std::cout << "Same identifier returns the same texture: "
+              << (first == second && first != nullptr ? "yes" : "no") << std::endl;
 
-    if (playerTest != nullptr && playerTest->GetOwner() != nullptr)
+    std::cout << "Cached textures: " << resources.GetTextureCount()
+              << ", cached shaders: " << resources.GetShaderCount() << std::endl;
+
+    const GameObject* face = m_scene.FindGameObject("Face");
+    if (face != nullptr)
     {
-        std::cout << "  owner reported by component: "
-                  << playerTest->GetOwner()->GetName() << std::endl;
+        std::cout << "Face has " << face->GetComponentCount() << " components" << std::endl;
+
+        std::cout << "GetComponent<CounterComponent>() on Face: "
+                  << (face->GetComponent<CounterComponent>() != nullptr ? "found" : "nullptr")
+                  << std::endl;
     }
 
-    CounterComponent* playerCounter = m_player.GetComponent<CounterComponent>();
-    std::cout << "GetComponent<CounterComponent>() on " << m_player.GetName()
-              << ": " << (playerCounter != nullptr ? "found" : "nullptr") << std::endl;
+    const GameObject* background = m_scene.FindGameObject("Background");
+    if (background != nullptr)
+    {
+        std::cout << "GetComponent<CounterComponent>() on Background: "
+                  << (background->GetComponent<CounterComponent>() != nullptr ? "found" : "nullptr")
+                  << std::endl;
+    }
 
-    std::cout << m_prop.GetName() << " has "
-              << m_prop.GetComponentCount() << " components" << std::endl;
-
-    CounterComponent* propCounter = m_prop.GetComponent<CounterComponent>();
-    std::cout << "GetComponent<CounterComponent>() on " << m_prop.GetName()
-              << ": " << (propCounter != nullptr ? "found" : "nullptr") << std::endl;
-
-    std::cout << "------------------------" << std::endl;
+    std::cout << "---------------------------" << std::endl;
 }
 
 bool Game::initWindowAndContext()
@@ -208,15 +235,22 @@ void Game::run()
 
 void Game::shutdown()
 {
-    const CounterComponent* counter = m_player.GetComponent<CounterComponent>();
-    if (counter != nullptr)
+    const GameObject* face = m_scene.FindGameObject("Face");
+    if (face != nullptr)
     {
-        std::cout << "CounterComponent on " << m_player.GetName()
-                  << " counted " << counter->GetCount() << " updates" << std::endl;
+        const CounterComponent* counter = face->GetComponent<CounterComponent>();
+
+        if (counter != nullptr)
+        {
+            std::cout << "CounterComponent on Face counted "
+                      << counter->GetCount() << " updates" << std::endl;
+        }
     }
 
-    m_texture.Release();
+    m_scene.Clear();
     m_renderer.Shutdown();
+
+    ResourceManager::Instance().Clear();
 
     if (m_glContext != nullptr)
     {
@@ -255,7 +289,7 @@ void Game::processEvents()
             std::cout << "Window resized to " << width << "x" << height << std::endl;
 
             m_renderer.SetViewport(width, height);
-            m_camera.SetViewportSize(width, height);
+            m_scene.SetViewportSize(width, height);
         }
 
         InputManager::Instance().ProcessEvent(event);
@@ -273,15 +307,16 @@ void Game::update(float deltaTime)
         return;
     }
 
-    m_elapsed += deltaTime;
+    if (input.IsKeyDown(SDLK_X))
+    {
+        if (m_scene.RemoveGameObject("GreenBox"))
+        {
+            std::cout << "GreenBox removed, scene now has "
+                      << m_scene.GetGameObjectCount() << " game objects" << std::endl;
+        }
+    }
 
-    m_player.Update(deltaTime);
-    m_prop.Update(deltaTime);
-
-    m_rightQuad.Rotate(kRotationSpeed * deltaTime);
-
-    const float pulse = 0.8f + 0.3f * std::sin(m_elapsed * 2.0f);
-    m_smallQuad.SetScale(pulse);
+    m_scene.Update(deltaTime);
 
     updateCamera(deltaTime);
 }
@@ -289,6 +324,8 @@ void Game::update(float deltaTime)
 void Game::updateCamera(float deltaTime)
 {
     const InputManager& input = InputManager::Instance();
+
+    Camera& camera = m_scene.GetCamera();
 
     glm::vec3 movement{ 0.0f, 0.0f, 0.0f };
 
@@ -299,43 +336,37 @@ void Game::updateCamera(float deltaTime)
 
     if (movement.x != 0.0f || movement.y != 0.0f)
     {
-        m_camera.Move(movement * kCameraSpeed * deltaTime);
+        camera.Move(movement * kCameraSpeed * deltaTime);
     }
 
     if (input.IsKeyPressed(SDLK_Q))
     {
-        m_camera.SetZoom(m_camera.GetZoom() + deltaTime * 2.0f);
+        camera.SetZoom(camera.GetZoom() + deltaTime * 2.0f);
     }
 
     if (input.IsKeyPressed(SDLK_E))
     {
-        m_camera.SetZoom(m_camera.GetZoom() - deltaTime * 2.0f);
+        camera.SetZoom(camera.GetZoom() - deltaTime * 2.0f);
     }
 
     if (input.IsKeyDown(SDLK_R))
     {
-        m_camera.SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
-        m_camera.SetZoom(3.0f);
+        camera.SetPosition(glm::vec3(0.0f, 0.0f, 0.0f));
+        camera.SetZoom(3.0f);
         std::cout << "Camera reset" << std::endl;
     }
 
     if (input.IsKeyUp(SDLK_W) || input.IsKeyUp(SDLK_A) ||
         input.IsKeyUp(SDLK_S) || input.IsKeyUp(SDLK_D))
     {
-        const glm::vec3& position = m_camera.GetPosition();
+        const glm::vec3& position = camera.GetPosition();
         std::cout << "Camera position: " << position.x << ", " << position.y << std::endl;
     }
 }
 
 void Game::render()
 {
-    m_renderer.Begin(m_camera);
-
-    m_renderer.DrawQuad(m_texture, m_leftQuad);
-    m_renderer.DrawQuad(m_texture, m_rightQuad);
-    m_renderer.DrawQuad(m_texture, m_smallQuad);
-
-    m_renderer.End();
+    m_scene.Render(m_renderer);
 
     SDL_GL_SwapWindow(m_window);
 }

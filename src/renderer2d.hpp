@@ -1,11 +1,14 @@
 #pragma once
 
 #include "camera.hpp"
-#include "shader.hpp"
 #include "texture.hpp"
 #include "transform.hpp"
 
+#include <glm/glm.hpp>
+
 #include <string>
+
+class Shader;
 
 class Renderer2D
 {
@@ -25,13 +28,19 @@ public:
     void SetClearColor(float red, float green, float blue, float alpha);
 
     void Begin(const Camera& camera);
+
+    void DrawQuad(const Texture& texture, const glm::mat4& model, const glm::vec4& color);
     void DrawQuad(const Texture& texture, const Transform& transform);
+    void DrawQuad(const Texture& texture, const Transform& transform, const glm::vec4& color);
+
     void End();
+
+    Shader* GetShader() const;
 
 private:
     bool CreateQuadGeometry();
 
-    Shader m_shader;
+    Shader* m_shader = nullptr;
 
     unsigned int m_vertexArray  = 0;
     unsigned int m_vertexBuffer = 0;

@@ -24,6 +24,12 @@ add_executable(GEP26S
     gameobject.hpp
     testcomponent.cpp
     testcomponent.hpp
+    resourcemanager.cpp
+    resourcemanager.hpp
+    spriterenderer.cpp
+    spriterenderer.hpp
+    scene.cpp
+    scene.hpp
 )
 
 target_include_directories(GEP26S PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

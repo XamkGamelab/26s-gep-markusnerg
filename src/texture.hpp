@@ -16,6 +16,8 @@ public:
     Texture& operator=(Texture&&)      = delete;
 
     bool LoadFromFile(const std::string& path);
+    bool CreateFromPixels(const unsigned char* pixels, int width, int height);
+    bool CreateWhite();
 
     void Bind(unsigned int slot = 0) const;
     void Unbind() const;
@@ -28,6 +30,8 @@ public:
     int GetHeight() const;
 
 private:
+    bool Upload(const void* pixels, int width, int height, int pitch);
+
     GLuint m_handle = 0;
     int    m_width  = 0;
     int    m_height = 0;
